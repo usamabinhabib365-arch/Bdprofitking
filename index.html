@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BdProfitKing Premium</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+margin:0;background:#070b14;color:#fff;
+font-family:Arial,sans-serif;
+}
+header{
+padding:20px;background:#10192b;
+color:#00e5a8;font-size:24px;
+font-weight:bold;text-align:center;
+}
+nav{
+display:flex;gap:8px;overflow:auto;
+padding:12px;background:#0d1524;
+}
+nav button{
+border:0;padding:12px 15px;
+background:#1c2940;color:white;
+border-radius:10px;
+}
+.container{padding:14px}
+.card{
+background:#121d30;padding:18px;
+border-radius:16px;margin-bottom:15px;
+border:1px solid #23324b;
+}
+.grid{
+display:grid;grid-template-columns:1fr 1fr;
+gap:12px;
+}
+h3{color:#00e5a8}
+input,select{
+width:100%;padding:13px;
+margin:8px 0;border-radius:8px;
+background:#07101d;color:white;
+border:1px solid #293b55;
+}
+.action{
+width:100%;padding:13px;
+border:0;border-radius:9px;
+background:#00e5a8;color:#00140e;
+font-weight:bold;
+}
+.page{display:none}
+.page.active{display:block}
+.green{color:#00e5a8}
+.red{color:#ff5577}
+small{color:#9aabc5}
+</style>
+</head>
+
+<body>
+
+<header>👑 BdProfitKing</header>
+
+<nav>
+<button onclick="show('home')">Home</button>
+<button onclick="show('journal')">Journal</button>
+<button onclick="show('compound')">Compound</button>
+<button onclick="show('lot')">Lot Size</button>
+<button onclick="show('signal')">Signals</button>
+</nav>
+
+<div class="container">
+
+<section id="home" class="page active">
+
+<div class="grid">
+<div class="card">
+<h3>Balance</h3>
+<h2 id="balance">$0.00</h2>
+</div>
+
+<div class="card">
+<h3>Total P/L</h3>
+<h2 id="profit">$0.00</h2>
+</div>
+</div>
+
+<div class="card">
+<h3>📈 Live Chart</h3>
+<div id="tv" style="height:400px"></div>
+</div>
+
+<div class="card">
+<h3>Trading Statistics</h3>
+<p>Total Trades: <span id="total">0</span></p>
+<p>Win Rate: <span id="winrate">0%</span></p>
+</div>
+
+</section>
+
+<section id="journal" class="page">
+<div class="card">
+<h3>📝 Trading Journal</h3>
+<input id="pair" placeholder="EUR/USD">
+<select id="type">
+<option>BUY</option>
+<option>SELL</option>
+</select>
+<input id="amount" type="number" placeholder="Trade Amount ($)">
+<input id="result" type="number" placeholder="Profit/Loss ($)">
+<button class="action" onclick="addTrade()">Save Trade</button>
+</div>
+<div class="card">
+<h3>History</h3>
+<div id="history"></div>
+<button class="action" onclick="clearTrades()">Clear History</button>
+</div>
+</section>
+
+<section id="compound" class="page">
+<div class="card">
+<h3>🧮 Compound Calculator</h3>
+<input id="money" type="number" placeholder="Starting Money">
+<input id="rate" type="number" placeholder="Daily Profit %">
+<input id="days" type="number" placeholder="Days">
+<button class="action" onclick="compound()">Calculate</button>
+<h2 id="compoundResult" class="green"></h2>
+</div>
+</section>
+
+<section id="lot" class="page">
+<div class="card">
+<h3>📏 Lot Calculator</h3>
+<input id="account" type="number" placeholder="Account Balance">
+<input id="risk" type="number" placeholder="Risk %">
+<input id="sl" type="number" placeholder="Stop Loss Pips">
+<input id="pip" type="number" placeholder="Pip Value ($)">
+<button class="action" onclick="lot()">Calculate</button>
+<h2 id="lotResult"></h2>
+</div>
+</section>
+
+<section id="signal" class="page">
+<div class="card">
+<h3>📡 Signal Analyzer</h3>
+<select id="symbol">
+<option>EUR/USD</option>
+<option>GBP/USD</option>
+<option>USD/JPY</option>
+<option>XAU/USD</option>
+</select>
+<select id="interval">
+<option value="1">1 Minute</option>
+<option value="5">5 Minutes</option>
+<option value="15">15 Minutes</option>
+</select>
+<input id="key" placeholder="Twelve Data API Key">
+<button class="action" onclick="signal()">Analyze</button>
+<h2 id="signalResult"></h2>
+<p id="signalDetails"></p>
+</div>
+</section>
+
+</div>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+
+new TradingView.widget({
+width:"100%",height:400,
+symbol:"FX:EURUSD",interval:"5",
+timezone:"Asia/Riyadh",theme:"dark",
+style:"1",locale:"en",
+container_id:"tv"
+});
+
+function show(id){
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+}
+
+let trades=JSON.parse(localStorage.getItem('bpk')||'[]');
+
+function addTrade(){
+let pair=document.getElementById('pair').value;
+let amount=Number(document.getElementById('amount').value);
+let result=Number(document.getElementById('result').value);
+
+if(!pair||!amount||document.getElementById('result').value===""){
+alert("সব তথ্য পূরণ করো");
+return;
+}
+
+trades.push({pair,amount,result});
+localStorage.setItem('bpk',JSON.stringify(trades));
+render();
+}
+
+function render(){
+let total=0,wins=0;
+document.getElementById('history').innerHTML='';
+
+trades.forEach(t=>{
+total+=t.result;
+if(t.result>0)wins++;
+
+document.getElementById('history').innerHTML+=
+`<div class="card">${t.pair} | ${t.result}$</div>`;
+});
+
+document.getElementById('profit').innerText='$'+total.toFixed(2);
+document.getElementById('balance').innerText='$'+total.toFixed(2);
+document.getElementById('total').innerText=trades.length;
+document.getElementById('winrate').innerText=
+(trades.length?wins/trades.length*100:0).toFixed(1)+'%';
+}
+
+function clearTrades(){
+if(confirm("সব Trade মুছে ফেলবে?")){
+trades=[];
+localStorage.removeItem('bpk');
+render();
+}
+}
+
+function compound(){
+let m=Number(money.value);
+let r=Number(rate.value);
+let d=Number(days.value);
+compoundResult.innerText='$'+(m*Math.pow(1+r/100,d)).toFixed(2);
+}
+
+function lot(){
+let b=Number(account.value);
+let r=Number(risk.value);
+let s=Number(sl.value);
+let p=Number(pip.value);
+if(!s||!p)return;
+lotResult.innerText="Lot: "+((b*r/100)/(s*p)).toFixed(3);
+}
+
+async function signal(){
+let k=key.value;
+let sym=symbol.value.replace('/','');
+let int=interval.value;
+if(!k){alert("API Key দিন");return;}
+
+signalResult.innerText="Analyzing...";
+
+try{
+let u=`https://api.twelvedata.com/time_series?symbol=${sym}&interval=${int}min&outputsize=50&apikey=${k}`;
+let d=await(await fetch(u)).json();
+if(!d.values)throw Error(d.message);
+
+let c=d.values.map(x=>+x.close).reverse();
+
+function ema(a,n){
+let e=a[0],k=2/(n+1);
+for(let i=1;i<a.length;i++)e=a[i]*k+e*(1-k);
+return e;
+}
+
+let f=ema(c.slice(-20),9);
+let s=ema(c.slice(-30),21);
+let g=0,l=0;
+
+for(let i=c.length-14;i<c.length;i++){
+let x=c[i]-c[i-1];
+if(x>0)g+=x;else l-=x;
+}
+
+let rs=g/(l||.00001);
+let r=100-100/(1+rs);
+
+let sig="WAIT";
+if(f>s&&r>50&&r<70)sig="BUY / CALL";
+if(f<s&&r<50&&r>30)sig="SELL / PUT";
+
+signalResult.innerText=sig;
+signalDetails.innerText="RSI: "+r.toFixed(2);
+}catch(e){
+signalResult.innerText="Error";
+signalDetails.innerText=e.message;
+}
+}
+
+render();
+
+</script>
+</body>
+</html>
